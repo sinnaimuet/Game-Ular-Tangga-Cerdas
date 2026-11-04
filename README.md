@@ -1,1 +1,1012 @@
 # Game-Ular-Tangga-Cerdas
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ular Tangga Cerdas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 50%, #fef3c7 100%);
+            touch-action: manipulation;
+        }
+        .title-font {
+            font-family: 'Fredoka', sans-serif;
+        }
+        /* Glassmorphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Custom 3D Dice styling */
+        .dice {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 8px 0 #cbd5e1, 0 12px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s ease;
+        }
+        .dice.rolling {
+            animation: roll 0.5s infinite linear;
+        }
+        @keyframes roll {
+            0% { transform: rotate(0deg) scale(1.1); }
+            50% { transform: rotate(180deg) scale(0.9); }
+            100% { transform: rotate(360deg) scale(1.1); }
+        }
+        /* Board grid responsiveness */
+        #board-container {
+            position: relative;
+            width: 100%;
+            max-width: 620px;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+        }
+        #board-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .grid-cell {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 2px 4px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            user-select: none;
+            border-radius: 4px;
+        }
+        /* Custom Chibi Pawn styling */
+        .chibi-pawn {
+            position: absolute;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 20;
+            filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.3));
+        }
+        /* Cute button styling */
+        .btn-cute {
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15);
+        }
+        .btn-cute:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 sm:p-4 text-slate-800">
+
+    <!-- Top Header Banner -->
+    <header class="text-center my-2">
+        <h1 class="title-font text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 drop-shadow-sm">
+            Ular Tangga Cerdas
+        </h1>
+        <p class="text-sm sm:text-base font-bold text-slate-600 mt-1">
+            Bermain Ular Tangga Sembari Belajar!
+        </p>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="w-full max-w-5xl mx-auto flex-grow flex flex-col items-center justify-center">
+
+        <!-- SETUP PANEL (START SCREEN) -->
+        <div id="setup-screen" class="glass-card rounded-3xl p-6 sm:p-8 w-full max-w-xl my-4 text-center">
+            <h2 class="title-font text-2xl font-bold text-indigo-700 mb-4">Pengaturan Permainan</h2>
+            
+            <!-- Game Mode Selector -->
+            <div class="mb-6">
+                <label class="block text-sm font-extrabold text-slate-700 mb-2">Pilih Mode Bermain:</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" id="mode-solo-btn" onclick="setMode('solo')" class="py-3 px-4 rounded-2xl font-bold border-2 border-indigo-500 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition">
+                        <i class="fa-solid fa-robot mr-2"></i>Sendiri (vs Soobin Bot)
+                    </button>
+                    <button type="button" id="mode-multi-btn" onclick="setMode('multi')" class="py-3 px-4 rounded-2xl font-bold border-2 border-slate-200 bg-slate-50 text-slate-600 hover:bg-indigo-50 transition">
+                        <i class="fa-solid fa-users mr-2"></i>Multiplayer (s/d 4 Orang)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Player Count Options (For Multiplayer) -->
+            <div id="player-count-box" class="mb-6 hidden">
+                <label class="block text-sm font-extrabold text-slate-700 mb-2">Jumlah Pemain:</label>
+                <div class="flex justify-center gap-3">
+                    <button type="button" onclick="setPlayerCount(2)" class="cnt-btn w-12 h-12 rounded-xl font-extrabold text-lg border-2 border-indigo-500 bg-indigo-500 text-white">2</button>
+                    <button type="button" onclick="setPlayerCount(3)" class="cnt-btn w-12 h-12 rounded-xl font-extrabold text-lg border-2 border-slate-200 bg-white text-slate-700">3</button>
+                    <button type="button" onclick="setPlayerCount(4)" class="cnt-btn w-12 h-12 rounded-xl font-extrabold text-lg border-2 border-slate-200 bg-white text-slate-700">4</button>
+                </div>
+            </div>
+
+            <!-- Players Configuration Forms -->
+            <div id="player-forms" class="space-y-4 mb-6 text-left">
+                <!-- Dynamically generated player input fields -->
+            </div>
+
+            <button onclick="startGame()" class="btn-cute w-full py-4 bg-gradient-to-r from-emerald-400 to-teal-500 text-white title-font text-xl font-bold rounded-2xl hover:brightness-110">
+                Mulai Permainan <i class="fa-solid fa-play ml-2"></i>
+            </button>
+        </div>
+
+        <!-- GAMEPLAY SCREEN -->
+        <div id="game-screen" class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6 hidden">
+            
+            <!-- BOARD CONTAINER -->
+            <div class="w-full max-w-[550px] flex flex-col items-center">
+                <div id="board-container" class="rounded-2xl shadow-xl overflow-hidden bg-white border-4 border-indigo-200">
+                    <!-- HTML Grid Layer (100 cells) -->
+                    <div id="board-grid" class="grid grid-cols-10 grid-rows-10 w-full h-full"></div>
+                    <!-- Canvas Layer for Snakes and Ladders -->
+                    <canvas id="board-canvas"></canvas>
+                    <!-- Chibi Pawns Overlay Layer -->
+                    <div id="pawns-layer" class="absolute inset-0 pointer-events-none z-20"></div>
+                </div>
+                
+                <div class="w-full text-center mt-2 text-xs font-bold text-slate-500">
+                    <i class="fa-solid fa-circle-question text-amber-500 mr-1"></i> Kotak dengan tanda '?' samar berisi Soal Matematika!
+                </div>
+            </div>
+
+            <!-- DASHBOARD / CONTROL PANEL -->
+            <div class="w-full lg:w-80 flex flex-col gap-4">
+                
+                <!-- Current Turn Card -->
+                <div class="glass-card rounded-3xl p-4 text-center">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Giliran Sekarang</span>
+                    <div id="turn-display" class="flex items-center justify-center gap-3 mt-2">
+                        <div id="current-pawn-avatar" class="w-12 h-12 rounded-full border-2 border-white shadow-md flex items-center justify-center text-2xl bg-amber-100"></div>
+                        <div class="text-left">
+                            <p id="current-player-name" class="font-black text-lg text-slate-800 leading-tight">Pemain 1</p>
+                            <p id="current-player-pos" class="text-xs font-bold text-indigo-600">Posisi: Kotak 1</p>
+                        </div>
+                    </div>
+
+                    <!-- Dice Section -->
+                    <div class="mt-5 flex flex-col items-center">
+                        <div id="dice-element" class="dice text-slate-700">
+                            <i class="fa-solid fa-dice-one"></i>
+                        </div>
+                        <button id="roll-btn" onclick="handleRollClick()" class="btn-cute mt-4 w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-2xl text-base">
+                            <i class="fa-solid fa-cubes mr-2"></i> Kocok Dadu
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Leaderboard / Status list -->
+                <div class="glass-card rounded-3xl p-4">
+                    <h3 class="font-extrabold text-sm text-slate-600 uppercase tracking-wider mb-3">Status Pemain</h3>
+                    <div id="players-status-list" class="space-y-2">
+                        <!-- Dynamic Player Status -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- QUIZ MODAL -->
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card bg-white rounded-3xl p-6 w-full max-w-md text-center relative border-4 border-amber-300 shadow-2xl animate-bounce-short">
+            
+            <div class="flex justify-between items-center mb-3">
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 font-extrabold text-xs rounded-full">
+                    <i class="fa-solid fa-brain mr-1"></i> Tantangan Cerdas
+                </span>
+                <!-- Timer Ring/Badge -->
+                <div class="flex items-center gap-1 font-black text-rose-500 bg-rose-50 px-3 py-1 rounded-full text-sm border border-rose-200">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="quiz-timer">10</span>s
+                </div>
+            </div>
+
+            <h3 class="text-slate-600 font-bold text-sm">Selesaikan soal matematika ini!</h3>
+            <div id="quiz-question" class="title-font text-3xl font-extrabold text-indigo-900 my-4 py-3 bg-indigo-50 rounded-2xl border border-indigo-100">
+                12 + 15 = ?
+            </div>
+
+            <!-- Multiple Choice Buttons -->
+            <div id="quiz-options" class="grid grid-cols-2 gap-3 mb-3">
+                <!-- Dynamic Options -->
+            </div>
+
+            <p id="quiz-feedback" class="text-sm font-bold h-6 text-slate-600"></p>
+        </div>
+    </div>
+
+    <!-- REWARD CHOICE MODAL (When answering quiz correctly) -->
+    <div id="reward-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card bg-white rounded-3xl p-6 w-full max-w-md text-center border-4 border-emerald-400 shadow-2xl">
+            <div class="text-emerald-500 text-4xl mb-2"><i class="fa-solid fa-circle-check"></i></div>
+            <h3 class="title-font text-2xl font-extrabold text-slate-800">Jawaban Benar!</h3>
+            <p class="text-sm font-bold text-slate-600 mt-1 mb-6">Pilih hadiah bonus keberhasilanmu:</p>
+            
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="applyReward('roll')" class="btn-cute py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold rounded-2xl flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-dice text-xl"></i> Kocok Dadu Sekali Lagi
+                </button>
+                <button onclick="applyReward('skip')" class="btn-cute py-3 px-4 bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold rounded-2xl flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-forward-step text-xl"></i> Lewati (Skip) Pemain Berikutnya
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER / WINNER MODAL -->
+    <div id="winner-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card bg-white rounded-3xl p-8 w-full max-w-md text-center border-4 border-yellow-400 shadow-2xl">
+            <div class="text-amber-400 text-6xl mb-3 animate-bounce"><i class="fa-solid fa-trophy"></i></div>
+            <h2 class="title-font text-3xl font-black text-slate-800">Selamat!</h2>
+            <p id="winner-name" class="text-xl font-extrabold text-indigo-600 mt-2">Pemain 1</p>
+            <p class="text-sm text-slate-500 font-bold mt-1">Telah berhasil mencapai Kotak 100 dan memenangkan permainan!</p>
+            
+            <button onclick="resetToSetup()" class="btn-cute mt-6 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-lg rounded-2xl">
+                Main Lagi <i class="fa-solid fa-rotate-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER CREDIT -->
+    <footer class="text-center py-3 text-xs font-extrabold text-slate-500 border-t border-slate-200/60 mt-4">
+        Created by Sinna Sahira Mikayla (30), Sakhisya Nafidz Azizah (28), Restya Yumna Hasna (26), Sofiyatun Nada (31).
+    </footer>
+
+    <!-- AUDIO SYNTHESIZER (WEB AUDIO API FOR NO EXTERNAL AUDIO DEPENDENCY) -->
+    <script>
+        // Web Audio API Sound Effects Generator
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playStep() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            },
+            playLadder() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(700, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            },
+            playSnake() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.linearRampToValueAtTime(150, now + 0.4);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            },
+            playCorrect() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            },
+            playWrong() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.setValueAtTime(140, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        };
+    </script>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        // Cute Animal Chibi Avatars SVG Templates
+        const ANIMAL_AVATARS = [
+            // 0: Rabbit 🐰 (Kelinci Pink)
+            `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="55" r="38" fill="#F472B6"/><ellipse cx="33" cy="22" rx="10" ry="24" fill="#F472B6"/><ellipse cx="33" cy="22" rx="5" ry="16" fill="#FBCFE8"/><ellipse cx="67" cy="22" rx="10" ry="24" fill="#F472B6"/><ellipse cx="67" cy="22" rx="5" ry="16" fill="#FBCFE8"/><ellipse cx="50" cy="62" rx="26" ry="20" fill="#FFF"/><circle cx="38" cy="52" r="4.5" fill="#1E293B"/><circle cx="62" cy="52" r="4.5" fill="#1E293B"/><circle cx="40" cy="50" r="1.5" fill="#FFF"/><circle cx="64" cy="50" r="1.5" fill="#FFF"/><polygon points="46,58 54,58 50,63" fill="#FB7185"/><path d="M 46 64 Q 50 68 54 64" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="28" cy="58" r="5" fill="#FDA4AF" opacity="0.6"/><circle cx="72" cy="58" r="5" fill="#FDA4AF" opacity="0.6"/></svg>`,
+            
+            // 1: Cat 🐱 (Kucing Kuning/Oranye)
+            `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="20,18 42,42 16,50" fill="#F59E0B"/><polygon points="25,24 38,42 22,48" fill="#FEF3C7"/><polygon points="80,18 58,42 84,50" fill="#F59E0B"/><polygon points="75,24 62,42 78,48" fill="#FEF3C7"/><circle cx="50" cy="56" r="38" fill="#FBBF24"/><ellipse cx="50" cy="64" rx="24" ry="18" fill="#FFF"/><circle cx="36" cy="52" r="4.5" fill="#1E293B"/><circle cx="64" cy="52" r="4.5" fill="#1E293B"/><circle cx="38" cy="50" r="1.5" fill="#FFF"/><circle cx="66" cy="50" r="1.5" fill="#FFF"/><polygon points="47,59 53,59 50,63" fill="#F472B6"/><path d="M 44 65 Q 50 70 56 65" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round"/><line x1="22" y1="58" x2="32" y2="60" stroke="#1E293B" stroke-width="2"/><line x1="22" y1="65" x2="32" y2="64" stroke="#1E293B" stroke-width="2"/><line x1="78" y1="58" x2="68" y2="60" stroke="#1E293B" stroke-width="2"/><line x1="78" y1="65" x2="68" y2="64" stroke="#1E293B" stroke-width="2"/></svg>`,
+            
+            // 2: Bear 🐻 (Beruang Cokelat)
+            `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="24" cy="28" r="16" fill="#B45309"/><circle cx="24" cy="28" r="8" fill="#FDE047"/><circle cx="76" cy="28" r="16" fill="#B45309"/><circle cx="76" cy="28" r="8" fill="#FDE047"/><circle cx="50" cy="56" r="38" fill="#D97706"/><ellipse cx="50" cy="65" rx="22" ry="18" fill="#FEF3C7"/><circle cx="37" cy="50" r="4.5" fill="#1E293B"/><circle cx="63" cy="50" r="4.5" fill="#1E293B"/><circle cx="39" cy="48" r="1.5" fill="#FFF"/><circle cx="65" cy="48" r="1.5" fill="#FFF"/><ellipse cx="50" cy="61" rx="6" ry="4" fill="#78350F"/><path d="M 46 67 Q 50 72 54 67" stroke="#78350F" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="28" cy="58" r="5" fill="#FB7185" opacity="0.5"/><circle cx="72" cy="58" r="5" fill="#FB7185" opacity="0.5"/></svg>`,
+            
+            // 3: Puppy / Dog 🐶 (Anjing Biru Muda)
+            `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="18" cy="50" rx="14" ry="24" fill="#3B82F6"/><ellipse cx="82" cy="50" rx="14" ry="24" fill="#3B82F6"/><circle cx="50" cy="54" r="38" fill="#60A5FA"/><ellipse cx="50" cy="64" rx="24" ry="18" fill="#FFF"/><circle cx="37" cy="50" r="4.5" fill="#1E293B"/><circle cx="63" cy="50" r="4.5" fill="#1E293B"/><circle cx="39" cy="48" r="1.5" fill="#FFF"/><circle cx="65" cy="48" r="1.5" fill="#FFF"/><ellipse cx="50" cy="60" rx="6" ry="4.5" fill="#1E293B"/><path d="M 45 66 Q 50 74 55 66" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M 50 68 Q 54 78 48 76 Z" fill="#F472B6"/><circle cx="29" cy="58" r="5" fill="#FDA4AF" opacity="0.6"/><circle cx="71" cy="58" r="5" fill="#FDA4AF" opacity="0.6"/></svg>`
+        ];
+
+        // Dedicated Bot Avatar 🤖 (Robo-Panda)
+        const BOT_AVATAR = `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="24" cy="28" r="14" fill="#312E81"/><circle cx="76" cy="28" r="14" fill="#312E81"/><circle cx="50" cy="54" r="38" fill="#818CF8"/><rect x="22" y="32" width="56" height="42" rx="12" fill="#E0E7FF" stroke="#3730A3" stroke-width="3"/><circle cx="38" cy="48" r="6" fill="#4F46E5"/><circle cx="62" cy="48" r="6" fill="#4F46E5"/><circle cx="40" cy="46" r="2" fill="#FFF"/><circle cx="64" cy="46" r="2" fill="#FFF"/><rect x="36" y="60" width="28" height="4" rx="2" fill="#3730A3"/><line x1="50" y1="32" x2="50" y2="18" stroke="#3730A3" stroke-width="4"/><circle cx="50" cy="14" r="6" fill="#F43F5E"/></svg>`;
+
+        const PLAYER_COLORS = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B'];
+
+        // Snake and Ladder Configurations
+        const SNAKES = {
+            28: 10,
+            37: 15,
+            48: 26,
+            75: 52,
+            94: 71,
+            97: 62
+        };
+
+        const LADDERS = {
+            4: 24,
+            12: 34,
+            22: 43,
+            41: 63,
+            54: 86,
+            72: 91
+        };
+
+        // Exactly 25 quiz square locations
+        const QUIZ_SQUARES = new Set([
+            6, 9, 15, 18, 25, 29, 33, 38, 44, 49, 
+            53, 57, 60, 65, 68, 74, 78, 81, 85, 88, 
+            90, 92, 95, 98, 99
+        ]);
+
+        // Dice FontAwesome classes
+        const DICE_ICONS = [
+            'fa-dice-one', 'fa-dice-one', 'fa-dice-two', 
+            'fa-dice-three', 'fa-dice-four', 'fa-dice-five', 'fa-dice-six'
+        ];
+
+        // State variables
+        let gameMode = 'solo'; // 'solo' or 'multi'
+        let playerCount = 2;
+        let players = [];
+        let currentPlayerIndex = 0;
+        let isRolling = false;
+        let quizTimerInterval = null;
+        let currentQuizAnswer = null;
+        let extraTurnsRemaining = 0;
+
+        // Initialize App
+        window.onload = function() {
+            setMode('solo');
+            renderBoardGrid();
+            window.addEventListener('resize', drawCanvasObjects);
+        };
+
+        // --- SETUP SCREEN FUNCTIONS ---
+        function setMode(mode) {
+            gameMode = mode;
+            const soloBtn = document.getElementById('mode-solo-btn');
+            const multiBtn = document.getElementById('mode-multi-btn');
+            const countBox = document.getElementById('player-count-box');
+
+            if (mode === 'solo') {
+                soloBtn.className = 'py-3 px-4 rounded-2xl font-bold border-2 border-indigo-500 bg-indigo-50 text-indigo-700 transition';
+                multiBtn.className = 'py-3 px-4 rounded-2xl font-bold border-2 border-slate-200 bg-slate-50 text-slate-600 transition';
+                countBox.classList.add('hidden');
+                playerCount = 2;
+            } else {
+                multiBtn.className = 'py-3 px-4 rounded-2xl font-bold border-2 border-indigo-500 bg-indigo-50 text-indigo-700 transition';
+                soloBtn.className = 'py-3 px-4 rounded-2xl font-bold border-2 border-slate-200 bg-slate-50 text-slate-600 transition';
+                countBox.classList.remove('hidden');
+            }
+            renderPlayerInputs();
+        }
+
+        function setPlayerCount(count) {
+            playerCount = count;
+            document.querySelectorAll('.cnt-btn').forEach(btn => {
+                if (parseInt(btn.innerText) === count) {
+                    btn.className = 'cnt-btn w-12 h-12 rounded-xl font-extrabold text-lg border-2 border-indigo-500 bg-indigo-500 text-white';
+                } else {
+                    btn.className = 'cnt-btn w-12 h-12 rounded-xl font-extrabold text-lg border-2 border-slate-200 bg-white text-slate-700';
+                }
+            });
+            renderPlayerInputs();
+        }
+
+        function renderPlayerInputs() {
+            const container = document.getElementById('player-forms');
+            container.innerHTML = '';
+
+            const animalLabels = ['Kelinci 🐰', 'Kucing 🐱', 'Beruang 🐻', 'Anjing 🐶'];
+
+            if (gameMode === 'solo') {
+                container.innerHTML = `
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div class="flex-grow mr-3">
+                            <label class="block text-xs font-extrabold text-slate-500 mb-1">PEMAIN 1 (ANDA)</label>
+                            <input type="text" id="p-name-0" value="Pemain 1" placeholder="Nama Pemain" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="text-center">
+                            <span class="text-[10px] font-bold text-slate-400 block">IKON</span>
+                            <div class="w-10 h-10">${ANIMAL_AVATARS[0]}</div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-extrabold text-indigo-400 block">LAWAN (AI BOT)</span>
+                            <span class="font-black text-slate-700">Soobin Bot 🤖</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-[10px] font-bold text-indigo-400 block">IKON</span>
+                            <div class="w-10 h-10">${BOT_AVATAR}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                for (let i = 0; i < playerCount; i++) {
+                    container.innerHTML += `
+                        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                            <div class="flex-grow mr-3">
+                                <label class="block text-xs font-extrabold text-slate-500 mb-1">PEMAIN ${i + 1}</label>
+                                <input type="text" id="p-name-${i}" value="Pemain ${i + 1}" placeholder="Nama Pemain ${i + 1}" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div class="text-center">
+                                <span class="text-[10px] font-bold text-slate-400 block">${animalLabels[i % animalLabels.length]}</span>
+                                <div class="w-10 h-10">${ANIMAL_AVATARS[i % ANIMAL_AVATARS.length]}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // --- GAME INITIALIZATION ---
+        function startGame() {
+            players = [];
+            if (gameMode === 'solo') {
+                const name = document.getElementById('p-name-0').value.trim() || 'Pemain 1';
+                players.push({
+                    id: 0, name: name, isBot: false,
+                    position: 1, color: PLAYER_COLORS[0],
+                    avatar: ANIMAL_AVATARS[0], skipTurn: false
+                });
+                players.push({
+                    id: 1, name: 'Soobin Bot', isBot: true,
+                    position: 1, color: PLAYER_COLORS[1],
+                    avatar: BOT_AVATAR, skipTurn: false
+                });
+            } else {
+                for (let i = 0; i < playerCount; i++) {
+                    const name = document.getElementById(`p-name-${i}`).value.trim() || `Pemain ${i + 1}`;
+                    const avatarSVG = ANIMAL_AVATARS[i % ANIMAL_AVATARS.length];
+                    players.push({
+                        id: i, name: name, isBot: false,
+                        position: 1, color: PLAYER_COLORS[i],
+                        avatar: avatarSVG, skipTurn: false
+                    });
+                }
+            }
+
+            currentPlayerIndex = 0;
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            renderPlayerPawns();
+            updateUI();
+            drawCanvasObjects();
+        }
+
+        // --- BOARD RENDERING ---
+        function renderBoardGrid() {
+            const grid = document.getElementById('board-grid');
+            grid.innerHTML = '';
+            
+            // Soft pastel background colors for cells
+            const bgClasses = ['bg-rose-50', 'bg-amber-50', 'bg-emerald-50', 'bg-sky-50', 'bg-indigo-50'];
+
+            for (let row = 9; row >= 0; row--) {
+                const isEvenRow = (row % 2 === 0);
+                for (let col = 0; col < 10; col++) {
+                    const colIdx = isEvenRow ? col : (9 - col);
+                    const squareNum = row * 10 + colIdx + 1;
+                    
+                    const cell = document.createElement('div');
+                    const colorBg = bgClasses[(squareNum + row) % bgClasses.length];
+                    cell.className = `grid-cell ${colorBg} border border-slate-200/60 flex flex-col justify-between`;
+                    cell.dataset.square = squareNum;
+
+                    // Number label (kept subtle & clear)
+                    const numLabel = document.createElement('span');
+                    numLabel.className = 'text-slate-600 font-extrabold text-[10px] sm:text-xs z-0 pointer-events-none';
+                    numLabel.innerText = squareNum;
+                    cell.appendChild(numLabel);
+
+                    // If quiz square, add faint watermark '?' in the center
+                    if (QUIZ_SQUARES.has(squareNum)) {
+                        const qMark = document.createElement('div');
+                        qMark.className = 'absolute inset-0 flex items-center justify-center font-black text-amber-500/20 text-2xl sm:text-3xl pointer-events-none select-none';
+                        qMark.innerText = '?';
+                        cell.appendChild(qMark);
+                    }
+
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        // Draw Snakes and Ladders using HTML5 Canvas
+        function drawCanvasObjects() {
+            const container = document.getElementById('board-container');
+            const canvas = document.getElementById('board-canvas');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const getSquareCenter = (num) => {
+                const row = Math.floor((num - 1) / 10);
+                const colRem = (num - 1) % 10;
+                const col = (row % 2 === 0) ? colRem : (9 - colRem);
+                const cellW = canvas.width / 10;
+                const cellH = canvas.height / 10;
+                return {
+                    x: col * cellW + cellW / 2,
+                    y: (9 - row) * cellH + cellH / 2
+                };
+            };
+
+            // Draw Ladders
+            for (let [start, end] of Object.entries(LADDERS)) {
+                const p1 = getSquareCenter(parseInt(start));
+                const p2 = getSquareCenter(parseInt(end));
+
+                ctx.save();
+                ctx.strokeStyle = '#8B5CF6'; // Cute Purple Ladders
+                ctx.lineWidth = Math.max(3, canvas.width / 120);
+                
+                // Parallel rails
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const dist = Math.hypot(dx, dy);
+                const nx = -dy / dist * 8;
+                const ny = dx / dist * 8;
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x + nx, p1.y + ny);
+                ctx.lineTo(p2.x + nx, p2.y + ny);
+                ctx.moveTo(p1.x - nx, p1.y - ny);
+                ctx.lineTo(p2.x - nx, p2.y - ny);
+                ctx.stroke();
+
+                // Steps
+                const steps = Math.floor(dist / 22);
+                ctx.strokeStyle = '#C4B5FD';
+                for (let i = 1; i < steps; i++) {
+                    const t = i / steps;
+                    const rx = p1.x + dx * t;
+                    const ry = p1.y + dy * t;
+                    ctx.beginPath();
+                    ctx.moveTo(rx + nx, ry + ny);
+                    ctx.lineTo(rx - nx, ry - ny);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // Draw Snakes
+            for (let [head, tail] of Object.entries(SNAKES)) {
+                const p1 = getSquareCenter(parseInt(head));
+                const p2 = getSquareCenter(parseInt(tail));
+
+                ctx.save();
+                ctx.strokeStyle = '#EF4444'; // Red playful snakes
+                ctx.lineWidth = Math.max(4, canvas.width / 90);
+                ctx.lineCap = 'round';
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                const midX = (p1.x + p2.x) / 2 + (p1.x > p2.x ? 25 : -25);
+                const midY = (p1.y + p2.y) / 2;
+                ctx.quadraticCurveTo(midX, midY, p2.x, p2.y);
+                ctx.stroke();
+
+                // Snake Head
+                ctx.fillStyle = '#DC2626';
+                ctx.beginPath();
+                ctx.arc(p1.x, p1.y, Math.max(6, canvas.width / 80), 0, Math.PI * 2);
+                ctx.fill();
+
+                // Snake Eyes
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(p1.x - 2, p1.y - 2, 2, 0, Math.PI * 2);
+                ctx.arc(p1.x + 2, p1.y - 2, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // Render Chibi Pawn overlays
+        function renderPlayerPawns() {
+            const layer = document.getElementById('pawns-layer');
+            layer.innerHTML = '';
+
+            players.forEach((p, idx) => {
+                const pawn = document.createElement('div');
+                pawn.id = `pawn-${p.id}`;
+                pawn.className = 'chibi-pawn w-8 h-8 sm:w-10 sm:h-10';
+                pawn.innerHTML = p.avatar;
+                layer.appendChild(pawn);
+            });
+            updatePawnPositions();
+        }
+
+        function updatePawnPositions() {
+            const container = document.getElementById('board-container');
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const cellW = w / 10;
+            const cellH = h / 10;
+
+            // Group players by position to offset overlapping pawns
+            const posMap = {};
+            players.forEach(p => {
+                if (!posMap[p.position]) posMap[p.position] = [];
+                posMap[p.position].push(p);
+            });
+
+            players.forEach(p => {
+                const pawnEl = document.getElementById(`pawn-${p.id}`);
+                if (!pawnEl) return;
+
+                const squareNum = p.position;
+                const row = Math.floor((squareNum - 1) / 10);
+                const colRem = (squareNum - 1) % 10;
+                const col = (row % 2 === 0) ? colRem : (9 - colRem);
+
+                // Offset Calculation for multiple pawns on same square
+                const group = posMap[squareNum];
+                const indexInGroup = group.indexOf(p);
+                let offsetX = 0;
+                let offsetY = 0;
+
+                if (group.length > 1) {
+                    offsetX = (indexInGroup % 2 === 0 ? -6 : 6);
+                    offsetY = (indexInGroup < 2 ? -6 : 6);
+                }
+
+                const posX = col * cellW + (cellW / 2) - 18 + offsetX;
+                const posY = (9 - row) * cellH + (cellH / 2) - 18 + offsetY;
+
+                pawnEl.style.transform = `translate(${posX}px, ${posY}px)`;
+            });
+        }
+
+        // --- GAMEPLAY CORE LOGIC ---
+        function updateUI() {
+            const p = players[currentPlayerIndex];
+            document.getElementById('current-player-name').innerText = p.name;
+            document.getElementById('current-player-pos').innerText = `Posisi: Kotak ${p.position}`;
+            document.getElementById('current-pawn-avatar').innerHTML = p.avatar;
+
+            // Render Player List Status
+            const list = document.getElementById('players-status-list');
+            list.innerHTML = '';
+            players.forEach((pl, idx) => {
+                const isCurrent = idx === currentPlayerIndex;
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-2 rounded-xl ${isCurrent ? 'bg-indigo-100/70 border-2 border-indigo-400' : 'bg-white/60'}">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7">${pl.avatar}</div>
+                            <span class="font-extrabold text-xs text-slate-700">${pl.name} ${pl.skipTurn ? '(Di-skip)' : ''}</span>
+                        </div>
+                        <span class="font-extrabold text-xs px-2 py-1 bg-white rounded-lg shadow-sm text-indigo-600">Kotak ${pl.position}</span>
+                    </div>
+                `;
+            });
+
+            // If it's Bot's turn, trigger auto roll
+            if (p.isBot && !isRolling) {
+                document.getElementById('roll-btn').disabled = true;
+                setTimeout(handleRollClick, 1000);
+            } else if (!p.isBot) {
+                document.getElementById('roll-btn').disabled = false;
+            }
+        }
+
+        function handleRollClick() {
+            if (isRolling) return;
+            isRolling = true;
+
+            const p = players[currentPlayerIndex];
+
+            // Handle turn skip if player was skipped by bonus reward
+            if (p.skipTurn) {
+                p.skipTurn = false;
+                alert(`${p.name} dilewati pada giliran ini!`);
+                isRolling = false;
+                nextTurn();
+                return;
+            }
+
+            const diceEl = document.getElementById('dice-element');
+            diceEl.classList.add('rolling');
+
+            let rollVal = 1;
+            let count = 0;
+            const interval = setInterval(() => {
+                rollVal = Math.floor(Math.random() * 6) + 1;
+                diceEl.innerHTML = `<i class="fa-solid ${DICE_ICONS[rollVal]}"></i>`;
+                count++;
+                if (count > 10) {
+                    clearInterval(interval);
+                    diceEl.classList.remove('rolling');
+                    movePlayer(p, rollVal);
+                }
+            }, 50);
+        }
+
+        function movePlayer(player, steps) {
+            let targetPos = player.position + steps;
+            
+            // Rebound if overshoot past 100
+            if (targetPos > 100) {
+                targetPos = 100 - (targetPos - 100);
+            }
+
+            let currentStep = player.position;
+            const stepInterval = setInterval(() => {
+                if (currentStep < targetPos) currentStep++;
+                else if (currentStep > targetPos) currentStep--;
+
+                player.position = currentStep;
+                AudioFX.playStep();
+                updatePawnPositions();
+                updateUI();
+
+                if (currentStep === targetPos) {
+                    clearInterval(stepInterval);
+                    setTimeout(() => checkSquareEvents(player), 300);
+                }
+            }, 250);
+        }
+
+        function checkSquareEvents(player) {
+            let pos = player.position;
+
+            // Check Win condition
+            if (pos === 100) {
+                showWinner(player);
+                return;
+            }
+
+            // Check Snake
+            if (SNAKES[pos]) {
+                AudioFX.playSnake();
+                player.position = SNAKES[pos];
+                updatePawnPositions();
+                updateUI();
+                alert(`Opps! ${player.name} tergigit ular dan turun ke kotak ${player.position}!`);
+                setTimeout(nextTurn, 500);
+                return;
+            }
+
+            // Check Ladder
+            if (LADDERS[pos]) {
+                AudioFX.playLadder();
+                player.position = LADDERS[pos];
+                updatePawnPositions();
+                updateUI();
+                alert(`Hore! ${player.name} menaiki tangga ke kotak ${player.position}!`);
+                setTimeout(nextTurn, 500);
+                return;
+            }
+
+            // Check Quiz Square (25 distinct squares)
+            if (QUIZ_SQUARES.has(pos)) {
+                triggerQuiz(player);
+            } else {
+                nextTurn();
+            }
+        }
+
+        // --- MATH QUIZ SYSTEM ---
+        function triggerQuiz(player) {
+            // Generate Random Math Question (Addition, Subtraction, Multiplication, Simple Division)
+            const ops = ['+', '-', 'x', '÷'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let num1, num2, correct;
+
+            if (op === '+') {
+                num1 = Math.floor(Math.random() * 40) + 5;
+                num2 = Math.floor(Math.random() * 40) + 5;
+                correct = num1 + num2;
+            } else if (op === '-') {
+                num1 = Math.floor(Math.random() * 40) + 10;
+                num2 = Math.floor(Math.random() * num1) + 1;
+                correct = num1 - num2;
+            } else if (op === 'x') {
+                num1 = Math.floor(Math.random() * 10) + 2;
+                num2 = Math.floor(Math.random() * 10) + 1;
+                correct = num1 * num2;
+            } else {
+                num2 = Math.floor(Math.random() * 9) + 2;
+                const multiplier = Math.floor(Math.random() * 10) + 1;
+                num1 = num2 * multiplier;
+                correct = multiplier;
+            }
+
+            currentQuizAnswer = correct;
+
+            // Options generator
+            let options = new Set([correct]);
+            while (options.size < 4) {
+                let dummy = correct + (Math.floor(Math.random() * 10) - 5);
+                if (dummy >= 0 && dummy !== correct) options.add(dummy);
+            }
+            const optsArray = Array.from(options).sort(() => Math.random() - 0.5);
+
+            if (player.isBot) {
+                // Bot automatically answers quiz
+                setTimeout(() => {
+                    const isBotCorrect = Math.random() < 0.75; // 75% accuracy for bot
+                    if (isBotCorrect) {
+                        AudioFX.playCorrect();
+                        alert(`Soobin Bot menjawab soal ${num1} ${op} ${num2} dengan BENAR (${correct})!`);
+                        applyReward('roll'); // Bot automatically rolls again
+                    } else {
+                        AudioFX.playWrong();
+                        alert(`Soobin Bot salah menjawab soal ${num1} ${op} ${num2}. Jawaban yang benar adalah ${correct}.`);
+                        nextTurn();
+                    }
+                }, 800);
+                return;
+            }
+
+            // Show UI Modal for Human Player
+            document.getElementById('quiz-question').innerText = `${num1} ${op} ${num2} = ?`;
+            const optBox = document.getElementById('quiz-options');
+            optBox.innerHTML = '';
+
+            optsArray.forEach(opt => {
+                optBox.innerHTML += `
+                    <button onclick="submitQuizAnswer(${opt})" class="btn-cute py-3 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-2 border-indigo-200 rounded-2xl font-black text-lg">
+                        ${opt}
+                    </button>
+                `;
+            });
+
+            document.getElementById('quiz-feedback').innerText = '';
+            document.getElementById('quiz-modal').classList.remove('hidden');
+
+            // 10 Seconds Timer
+            let timeLeft = 10;
+            document.getElementById('quiz-timer').innerText = timeLeft;
+            clearInterval(quizTimerInterval);
+            quizTimerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('quiz-timer').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(quizTimerInterval);
+                    closeQuizModal();
+                    alert(`Waktu habis! Jawaban yang benar adalah ${currentQuizAnswer}. Tidak ada efek.`);
+                    nextTurn();
+                }
+            }, 1000);
+        }
+
+        function submitQuizAnswer(selected) {
+            clearInterval(quizTimerInterval);
+            const feedback = document.getElementById('quiz-feedback');
+
+            if (selected === currentQuizAnswer) {
+                AudioFX.playCorrect();
+                feedback.className = "text-sm font-bold text-emerald-600";
+                feedback.innerText = "Jawaban Tepat sekali!";
+                setTimeout(() => {
+                    closeQuizModal();
+                    document.getElementById('reward-modal').classList.remove('hidden');
+                }, 700);
+            } else {
+                AudioFX.playWrong();
+                feedback.className = "text-sm font-bold text-rose-500";
+                feedback.innerText = `Salah! Jawaban yang benar adalah ${currentQuizAnswer}.`;
+                setTimeout(() => {
+                    closeQuizModal();
+                    nextTurn();
+                }, 1400);
+            }
+        }
+
+        function closeQuizModal() {
+            document.getElementById('quiz-modal').classList.add('hidden');
+        }
+
+        function applyReward(type) {
+            document.getElementById('reward-modal').classList.add('hidden');
+            if (type === 'roll') {
+                extraTurnsRemaining = 1;
+                alert(`${players[currentPlayerIndex].name} mendapatkan giliran kocok dadu sekali lagi!`);
+                isRolling = false;
+                updateUI();
+            } else if (type === 'skip') {
+                const nextIdx = (currentPlayerIndex + 1) % players.length;
+                players[nextIdx].skipTurn = true;
+                alert(`${players[nextIdx].name} akan dilewati pada giliran selanjutnya!`);
+                nextTurn();
+            }
+        }
+
+        function nextTurn() {
+            // Pastikan jika ada bonus lempar dadu, itu hanya berlaku tepat 1 kali saja
+            if (extraTurnsRemaining > 0) {
+                extraTurnsRemaining = 0; // Langsung reset agar giliran bonus habis setelah dilempar
+            } else {
+                currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            }
+            isRolling = false;
+            updateUI();
+        }
+
+        function showWinner(player) {
+            document.getElementById('winner-name').innerText = player.name;
+            document.getElementById('winner-modal').classList.remove('hidden');
+        }
+
+        function resetToSetup() {
+            document.getElementById('winner-modal').classList.add('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+```
